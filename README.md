@@ -27,16 +27,16 @@ This project implements a mini yet realistic distributed system that demonstrate
 
 ## 🧱 System Architecture
 
-`Client`
-`⬇️`
-`Service A — Service B — Service C`
-`⬇️           ⬇️         ⬇️`
-`Heartbeat  Heartbeat  Heartbeat`
-`⬇️     ⬇️     ⬇️`
-`Health Monitor 🩺`
-`⬇️`
-`Failure Detection 🚨`
-`⬇️`
+`Client`<br>
+`⬇️`<br>
+`Service A — Service B — Service C`<br>
+`⬇️           ⬇️         ⬇️`<br>
+`Heartbeat  Heartbeat  Heartbeat`<br>
+`      ⬇️     `<br>
+`Health Monitor 🩺`<br>
+`⬇️`<br>
+`Failure Detection 🚨`<br>
+`⬇️`<br>
 `Automatic Recovery 🔄`
 
 
