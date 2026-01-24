@@ -12,6 +12,8 @@
 
     <modules>
         <module>service-a</module>
+        <module>service-b</module>
+        <module>service-c</module>
     </modules>
 
     <parent>
