@@ -1,18 +1,17 @@
 package com.selfhealing.monitor;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.HashMap;
 
 @SpringBootApplication
 public class HealthMonitorApplication {
@@ -20,6 +19,20 @@ public class HealthMonitorApplication {
         SpringApplication.run(HealthMonitorApplication.class, args);
         System.out.println("🩺 Health Monitor is starting...");
         System.out.println("📊 Ready to monitor services!");
+    }
+    
+    // Add CORS configuration to allow browser access
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*");
+            }
+        };
     }
 }
 
@@ -53,6 +66,7 @@ class ServiceInfo {
 
 @RestController
 @RequestMapping("/monitor")
+@CrossOrigin(origins = "*")  // Allow requests from any origin
 class HealthMonitorController {
     
     // Storage for all registered services

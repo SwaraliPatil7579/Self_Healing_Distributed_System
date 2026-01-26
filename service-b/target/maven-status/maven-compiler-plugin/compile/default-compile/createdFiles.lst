@@ -1,2 +1,3 @@
-com\selfhealing\serviceb\ServiceBApplication.class
 com\selfhealing\serviceb\ServiceBController.class
+com\selfhealing\serviceb\HeartbeatService.class
+com\selfhealing\serviceb\ServiceBApplication.class
