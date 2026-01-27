@@ -1,4 +1,5 @@
 com\selfhealing\monitor\HealthMonitorApplication.class
 com\selfhealing\monitor\HealthMonitorApplication$1.class
+com\selfhealing\monitor\FailureDetector.class
 com\selfhealing\monitor\HealthMonitorController.class
 com\selfhealing\monitor\ServiceInfo.class
