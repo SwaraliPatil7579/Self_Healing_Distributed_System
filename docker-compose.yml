@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  health-monitor:
+    build:
+      context: ./health-monitor
+      dockerfile: Dockerfile
+    container_name: health-monitor
+    ports:
+      - "8080:8080"
+    networks:
+      - self-healing-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/monitor/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  service-a:
+    build:
+      context: ./service-a
+      dockerfile: Dockerfile
+    container_name: service-a
+    ports:
+      - "8081:8081"
+    networks:
+      - self-healing-network
+    depends_on:
+      health-monitor:
+        condition: service_healthy
+    environment:
+      - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    restart: unless-stopped
+
+  service-b:
+    build:
+      context: ./service-b
+      dockerfile: Dockerfile
+    container_name: service-b
+    ports:
+      - "8082:8082"
+    networks:
+      - self-healing-network
+    depends_on:
+      health-monitor:
+        condition: service_healthy
+    environment:
+      - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    restart: unless-stopped
+
+  service-c:
+    build:
+      context: ./service-c
+      dockerfile: Dockerfile
+    container_name: service-c
+    ports:
+      - "8083:8083"
+    networks:
+      - self-healing-network
+    depends_on:
+      health-monitor:
+        condition: service_healthy
+    environment:
+      - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    restart: unless-stopped
+
+networks:
+  self-healing-network:
+    driver: bridge

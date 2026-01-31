@@ -39,7 +39,8 @@ class HeartbeatService {
     @Value("${server.port}")
     private int port;
     
-    private static final String MONITOR_URL = "http://localhost:8080/monitor/heartbeat";
+    @Value("${MONITOR_URL:http://localhost:8080/monitor/heartbeat}")
+private String monitorUrl;
     
     public HeartbeatService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -53,7 +54,7 @@ class HeartbeatService {
             heartbeatData.put("host", "localhost");
             heartbeatData.put("port", port);
             
-            restTemplate.postForObject(MONITOR_URL, heartbeatData, String.class);
+            restTemplate.postForObject(monitorUrl, heartbeatData, String.class);
             System.out.println("💓 Heartbeat sent to Health Monitor");
             
         } catch (Exception e) {
