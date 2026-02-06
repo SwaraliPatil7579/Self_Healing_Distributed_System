@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -76,66 +80,76 @@ class ServiceInfo {
 @Component
 class FailureDetector {
     
-    private final Map<String, ServiceInfo> services;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final Logger logger = LoggerFactory.getLogger(FailureDetector.class);
     private static final long FAILURE_THRESHOLD_SECONDS = 15;
     
-    public FailureDetector(HealthMonitorController controller) {
-        this.services = controller.getServices();
-    }
+    @Autowired
+    private HealthMonitorController controller;
+
     
-    // This runs automatically every 10 seconds!
+    @Autowired
+    private DockerManager dockerManager; // 👈 INJECT Docker Manager
+    
+    /**
+     * Check for failed services every 10 seconds.
+     * Now with AUTOMATIC RESTART! 🚀
+     */
     @Scheduled(fixedRate = 10000)
     public void detectFailures() {
-        if (services.isEmpty()) {
-            return; // No services to check
-        }
+        logger.debug("🔍 Running failure detection...");
         
+        Map<String, ServiceInfo> services = controller.getServices();
         LocalDateTime now = LocalDateTime.now();
-        System.out.println("\n🔍 [" + now.format(formatter) + "] Running failure detection...");
         
-        for (Map.Entry<String, ServiceInfo> entry : services.entrySet()) {
-            String serviceName = entry.getKey();
-            ServiceInfo info = entry.getValue();
+        for (ServiceInfo service : services.values()) {
+            long secondsSinceHeartbeat = ChronoUnit.SECONDS.between(service.getLastHeartbeat(), now);
             
-            // Calculate seconds since last heartbeat
-            long secondsSinceHeartbeat = ChronoUnit.SECONDS.between(
-                info.getLastHeartbeat(), 
-                now
-            );
+            boolean isDead = secondsSinceHeartbeat >= FAILURE_THRESHOLD_SECONDS;
+            String previousStatus = service.getStatus();
             
-            String previousStatus = info.getStatus();
-            String newStatus;
-            
-            // Determine new status based on time
-            if (secondsSinceHeartbeat >= FAILURE_THRESHOLD_SECONDS) {
-                newStatus = "DEAD";
-            } else {
-                newStatus = "HEALTHY";
-            }
-            
-            // If status changed, log it and update!
-            if (!newStatus.equals(previousStatus)) {
-                info.setStatus(newStatus);
-                info.setLastStatusChange(now);
+            if (isDead && !"DEAD".equals(previousStatus)) {
+                // SERVICE JUST DIED! 💀
+                service.setStatus("DEAD");
+                logger.error("💀 SERVICE FAILURE DETECTED: {} (no heartbeat for {} seconds)", 
+                        service.getServiceName(), secondsSinceHeartbeat);
                 
-                if (newStatus.equals("DEAD")) {
-                    System.out.println("❌ FAILURE DETECTED: " + serviceName + 
-                                     " is DEAD! Last heartbeat: " + secondsSinceHeartbeat + "s ago");
-                } else {
-                    System.out.println("✅ RECOVERY DETECTED: " + serviceName + 
-                                     " is back HEALTHY!");
-                }
+                // 🚀 AUTOMATIC RESTART! This is the magic!
+                logger.warn("🔧 Initiating automatic recovery for {}...", service.getServiceName());
+                attemptAutoRestart(service.getServiceName());
+                
+            } else if (!isDead && "DEAD".equals(previousStatus)) {
+                // SERVICE RECOVERED! ✅
+                service.setStatus("HEALTHY");
+                logger.info("✅ SERVICE RECOVERED: {} (heartbeat received after {} seconds)", 
+                        service.getServiceName(), secondsSinceHeartbeat);
+            }
+        }
+    }
+    
+    /**
+     * Attempt to automatically restart a failed service.
+     * This makes the system truly self-healing!
+     * 
+     * @param serviceName Name of the service to restart
+     */
+    private void attemptAutoRestart(String serviceName) {
+        try {
+            logger.info("🔄 Attempting automatic restart of {}...", serviceName);
+            
+            // Call Docker Manager to restart container
+            boolean success = dockerManager.restartContainer(serviceName);
+            
+            if (success) {
+                logger.info("✅ AUTO-HEAL SUCCESS: {} container restarted!", serviceName);
+                logger.info("⏳ Waiting for {} to send heartbeat...", serviceName);
+            } else {
+                logger.error("❌ AUTO-HEAL FAILED: Could not restart {} container", serviceName);
+                logger.error("💡 Manual intervention may be required for {}", serviceName);
             }
             
-            // Always show current status
-            String statusIcon = newStatus.equals("HEALTHY") ? "💚" : "💀";
-            System.out.println("   " + statusIcon + " " + serviceName + 
-                             " - Status: " + newStatus + 
-                             " (Last heartbeat: " + secondsSinceHeartbeat + "s ago)");
+        } catch (Exception e) {
+            logger.error("❌ Exception during auto-restart of {}: {}", serviceName, e.getMessage());
         }
-        
-        System.out.println("🔍 Failure detection complete.\n");
     }
 }
 

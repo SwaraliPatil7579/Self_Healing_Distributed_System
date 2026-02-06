@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+
   health-monitor:
     build:
       context: ./health-monitor
@@ -10,12 +11,17 @@ services:
       - "8080:8080"
     networks:
       - self-healing-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/monitor/health || exit 1"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+    restart: unless-stopped
 
   service-a:
     build:
@@ -26,11 +32,10 @@ services:
       - "8081:8081"
     networks:
       - self-healing-network
-    depends_on:
-      health-monitor:
-        condition: service_healthy
     environment:
       - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    depends_on:
+      - health-monitor
     restart: unless-stopped
 
   service-b:
@@ -42,11 +47,10 @@ services:
       - "8082:8082"
     networks:
       - self-healing-network
-    depends_on:
-      health-monitor:
-        condition: service_healthy
     environment:
       - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    depends_on:
+      - health-monitor
     restart: unless-stopped
 
   service-c:
@@ -58,11 +62,10 @@ services:
       - "8083:8083"
     networks:
       - self-healing-network
-    depends_on:
-      health-monitor:
-        condition: service_healthy
     environment:
       - MONITOR_URL=http://health-monitor:8080/monitor/heartbeat
+    depends_on:
+      - health-monitor
     restart: unless-stopped
 
 networks:
